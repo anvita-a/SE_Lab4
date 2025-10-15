@@ -7,36 +7,50 @@ class Paddle:
         self.y = y
         self.width = width
         self.height = height
-        self.speed = 7
         self.is_ai = is_ai
-        self.reaction_delay = random.randint(0, 5)  # frames to delay AI reaction
+
+        # Slightly increase AI speed to make it competitive
+        self.speed = 8 if not is_ai else 8.5
+
+        # AI tuning parameters
+        self.reaction_timer = 0
+        self.reaction_interval = random.randint(1, 3)   # reacts much faster now
+        self.error_margin = random.randint(5, 15)       # tighter tracking
 
     def move(self, dy, screen_height):
+        """Move the paddle while keeping it within bounds"""
         self.y += dy
         self.y = max(0, min(self.y, screen_height - self.height))
 
     def rect(self):
+        """Return the paddle rectangle for drawing and collision"""
         return pygame.Rect(self.x, self.y, self.width, self.height)
 
     def auto_track(self, ball, screen_height):
+        """AI follows the ball with near-perfect but human-like precision"""
         if not self.is_ai:
             return
 
-        # Random chance to delay reaction
-        if random.randint(0, 5) < self.reaction_delay:
-            return  # skip movement this frame
+        # Quick reaction cycle — almost every frame
+        if self.reaction_timer > 0:
+            self.reaction_timer -= 1
+            return
+        else:
+            self.reaction_timer = random.randint(1, 3)
 
-        # Calculate target center
         paddle_center = self.y + self.height / 2
         ball_center = ball.y + ball.height / 2
 
-        # Move only part of the distance to be beatable
-        if ball_center < paddle_center:
-            self.move(-self.speed, screen_height)
-        elif ball_center > paddle_center:
-            self.move(self.speed, screen_height)
+        # Move toward ball center, slightly overshoot sometimes
+        if abs(ball_center - paddle_center) > self.error_margin:
+            if ball_center < paddle_center:
+                self.move(-self.speed, screen_height)
+            elif ball_center > paddle_center:
+                self.move(self.speed, screen_height)
 
-        # Add small random overshoot/undershoot
-        self.y += random.choice([-1, 0, 1])
-        # Clamp to screen
+        # Add tiny random offset (makes AI human)
+        if random.random() < 0.05:
+            self.y += random.choice([-2, -1, 0, 1, 2])
+
+        # Clamp within screen bounds
         self.y = max(0, min(self.y, screen_height - self.height))
